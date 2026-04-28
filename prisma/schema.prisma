@@ -1,0 +1,115 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")  // add this line
+}
+enum Role {
+  PATIENT
+  DOCTOR
+  ADMIN
+}
+
+enum Status {
+  PENDING
+  PAID
+  ASSIGNED
+  IN_REVIEW
+  COMPLETED
+}
+
+enum Priority {
+  STANDARD
+  URGENT
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(PATIENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  patients        Patient[]
+  cases           Case[]           @relation("AssignedDoctor")
+  interpretations Interpretation[]
+  payments        Payment[]
+}
+
+model Patient {
+  id          String    @id @default(cuid())
+  userId      String
+  fullName    String
+  dateOfBirth DateTime
+  gender      String
+  symptoms    String?
+  createdAt   DateTime  @default(now())
+
+  user       User        @relation(fields: [userId], references: [id])
+  ecgUploads ECGUpload[]
+}
+
+model ECGUpload {
+  id        String   @id @default(cuid())
+  patientId String
+  fileUrl   String
+  fileType  String
+  status    Status   @default(PENDING)
+  createdAt DateTime @default(now())
+
+  patient Patient  @relation(fields: [patientId], references: [id])
+  case    Case?
+  payment Payment?
+}
+
+model Case {
+  id          String    @id @default(cuid())
+  ecgUploadId String    @unique
+  assignedTo  String?
+  priority    Priority  @default(STANDARD)
+  dueAt       DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  ecgUpload      ECGUpload       @relation(fields: [ecgUploadId], references: [id])
+  doctor         User?           @relation("AssignedDoctor", fields: [assignedTo], references: [id])
+  interpretation Interpretation?
+}
+
+model Interpretation {
+  id         String   @id @default(cuid())
+  caseId     String   @unique
+  doctorId   String
+  rhythm     String
+  rate       String
+  axis       String
+  findings   String
+  conclusion String
+  riskLevel  String
+  reportUrl  String?
+  createdAt  DateTime @default(now())
+
+  case   Case @relation(fields: [caseId], references: [id])
+  doctor User @relation(fields: [doctorId], references: [id])
+}
+
+model Payment {
+  id          String    @id @default(cuid())
+  ecgUploadId String    @unique
+  userId      String
+  amount      Int
+  reference   String    @unique
+  status      String    @default("pending")
+  paidAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  ecgUpload ECGUpload @relation(fields: [ecgUploadId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+}
