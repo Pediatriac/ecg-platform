@@ -4,63 +4,39 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 
-export const authOptions = {
+const authOptions = {
   providers: [
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        email:    { label: "Email",    type: "email"    },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         try {
-          console.log("=== AUTH ATTEMPT ===")
-          console.log("Email:", credentials?.email)
+          if (!credentials?.email || !credentials?.password) return null
 
-          if (!credentials?.email || !credentials?.password) {
-            console.log("ERROR: Missing credentials")
-            return null
-          }
-
-          // Test database connection
-          console.log("Connecting to database...")
           const user = await prisma.user.findUnique({
             where: { email: credentials.email },
           })
 
-          console.log("User found:", user ? "YES" : "NO")
-
-          if (!user) {
-            console.log("ERROR: No user found for:", credentials.email)
-            return null
-          }
-
-          console.log("User role:", user.role)
-          console.log("Password hash exists:", !!user.password)
-          console.log("Hash preview:", user.password?.substring(0, 7))
+          if (!user) return null
 
           const passwordMatch = await bcrypt.compare(
             credentials.password,
             user.password
           )
 
-          console.log("Password match:", passwordMatch)
-
-          if (!passwordMatch) {
-            console.log("ERROR: Wrong password for:", credentials.email)
-            return null
-          }
-
-          console.log("=== AUTH SUCCESS ===")
+          if (!passwordMatch) return null
 
           return {
-            id: user.id,
-            name: user.name,
+            id:    user.id,
+            name:  user.name,
             email: user.email,
-            role: user.role,
+            role:  user.role,
           }
         } catch (err) {
-          console.error("=== AUTH EXCEPTION ===", err)
+          console.error("Auth error:", err)
           return null
         }
       },
@@ -88,8 +64,9 @@ export const authOptions = {
   session: {
     strategy: "jwt" as const,
   },
-  debug: true, // ← shows extra NextAuth logs in terminal
+  secret: process.env.NEXTAUTH_SECRET,
 }
 
 const handler = NextAuth(authOptions)
 export { handler as GET, handler as POST }
+export { authOptions }

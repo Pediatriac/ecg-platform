@@ -11,6 +11,7 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const registered = searchParams.get("registered")
+  const callbackUrl = searchParams.get("callbackUrl")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
@@ -41,9 +42,15 @@ function LoginForm() {
       const session = await res.json()
       const role    = session?.user?.role
 
-      if (role === "ADMIN")        router.push("/admin")
-      else if (role === "DOCTOR")  router.push("/doctor")
-      else                         router.push("/dashboard")
+      if (callbackUrl) {
+        router.push(callbackUrl)
+      } else if (role === "ADMIN") {
+        router.push("/admin")
+      } else if (role === "DOCTOR") {
+        router.push("/doctor")
+      } else {
+        router.push("/dashboard")
+      }
 
     } catch (err) {
       setError("Something went wrong. Please try again.")

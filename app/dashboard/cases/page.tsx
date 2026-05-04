@@ -210,7 +210,7 @@ export default function CasesPage() {
 
                       {/* Download report button — only when completed */}
                       {c.case?.interpretation && c.case.interpretation.reportUrl && (
-                        
+                        <a
                           href={c.case.interpretation.reportUrl}
                           target="_blank"
                           rel="noopener noreferrer"

@@ -1,9 +1,9 @@
- // app/admin/page.tsx
+// app/admin/page.tsx
 "use client"
 
 import { useSession, signOut } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useEffect, useState, Suspense } from "react"
 import Image from "next/image"
 
 const ROLE_COLORS: Record<string, string> = {
@@ -20,20 +20,29 @@ const STATUS_COLORS: Record<string, string> = {
   COMPLETED: "#4CAF50",
 }
 
-export default function AdminPanel() {
+function AdminPanelContent() {
   const { data: session, status } = useSession()
-  const router = useRouter()
+  const router       = useRouter()
+  const searchParams = useSearchParams()
 
-  const [activeTab, setActiveTab]     = useState<"overview" | "cases" | "users">("overview")
-  const [stats, setStats]             = useState<any>(null)
-  const [recentPayments, setRecent]   = useState<any[]>([])
-  const [users, setUsers]             = useState<any[]>([])
-  const [cases, setCases]             = useState<any[]>([])
-  const [doctors, setDoctors]         = useState<any[]>([])
-  const [loading, setLoading]         = useState(true)
-  const [assigning, setAssigning]     = useState<string | null>(null)
+  const [activeTab, setActiveTab]       = useState<"overview" | "cases" | "users">("overview")
+  const [stats, setStats]               = useState<any>(null)
+  const [recentPayments, setRecent]     = useState<any[]>([])
+  const [users, setUsers]               = useState<any[]>([])
+  const [cases, setCases]               = useState<any[]>([])
+  const [doctors, setDoctors]           = useState<any[]>([])
+  const [loading, setLoading]           = useState(true)
+  const [assigning, setAssigning]       = useState<string | null>(null)
   const [updatingRole, setUpdatingRole] = useState<string | null>(null)
-  const [toast, setToast]             = useState("")
+  const [toast, setToast]               = useState("")
+
+  // Read tab from URL
+  useEffect(() => {
+    const tab = searchParams.get("tab")
+    if (tab === "cases" || tab === "users" || tab === "overview") {
+      setActiveTab(tab as any)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login")
@@ -43,9 +52,7 @@ export default function AdminPanel() {
   }, [status, session, router])
 
   useEffect(() => {
-    if (status === "authenticated") {
-      loadAll()
-    }
+    if (status === "authenticated") loadAll()
   }, [status])
 
   async function loadAll() {
@@ -71,9 +78,9 @@ export default function AdminPanel() {
   async function handleAssignDoctor(caseId: string, doctorId: string) {
     setAssigning(caseId)
     const res = await fetch("/api/admin/cases", {
-      method: "PATCH",
+      method:  "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ caseId, doctorId }),
+      body:    JSON.stringify({ caseId, doctorId }),
     })
     if (res.ok) {
       showToast("Case assigned successfully!")
@@ -85,9 +92,9 @@ export default function AdminPanel() {
   async function handleRoleChange(userId: string, role: string) {
     setUpdatingRole(userId)
     const res = await fetch("/api/admin/users", {
-      method: "PATCH",
+      method:  "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, role }),
+      body:    JSON.stringify({ userId, role }),
     })
     if (res.ok) {
       showToast("User role updated!")
@@ -112,22 +119,26 @@ export default function AdminPanel() {
         new Date(p.paidAt).toLocaleDateString(),
       ]),
     ]
-    const csv = rows.map((r) => r.join(",")).join("\n")
+    const csv  = rows.map((r) => r.join(",")).join("\n")
     const blob = new Blob([csv], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement("a")
+    a.href     = url
     a.download = "ecg-payments.csv"
     a.click()
   }
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: "#0a0a0a" }}>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: "#0a0a0a" }}
+      >
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full border-4 animate-spin"
-            style={{ borderColor: "#E91E8C", borderTopColor: "transparent" }} />
+          <div
+            className="w-12 h-12 rounded-full border-4 animate-spin"
+            style={{ borderColor: "#E91E8C", borderTopColor: "transparent" }}
+          />
           <p className="text-gray-400 text-sm">Loading admin panel...</p>
         </div>
       </div>
@@ -135,9 +146,9 @@ export default function AdminPanel() {
   }
 
   const TABS = [
-    { key: "overview", label: "Overview",    icon: "📊", color: "#E91E8C" },
-    { key: "cases",    label: "Cases",       icon: "🫀", color: "#9C27B0" },
-    { key: "users",    label: "Users",       icon: "👥", color: "#00BCD4" },
+    { key: "overview", label: "Overview", icon: "📊", color: "#E91E8C" },
+    { key: "cases",    label: "Cases",    icon: "🫀", color: "#9C27B0" },
+    { key: "users",    label: "Users",    icon: "👥", color: "#00BCD4" },
   ]
 
   return (
@@ -154,32 +165,50 @@ export default function AdminPanel() {
       )}
 
       {/* Navbar */}
-      <nav className="flex items-center justify-between px-6 py-4 border-b"
-        style={{ backgroundColor: "#111111", borderColor: "#2a2a2a" }}>
+      <nav
+        className="flex items-center justify-between px-6 py-4 border-b"
+        style={{ backgroundColor: "#111111", borderColor: "#2a2a2a" }}
+      >
         <div className="flex items-center gap-3">
-          <div className="p-0.5 rounded-full"
-            style={{ background: "linear-gradient(135deg, #E91E8C, #9C27B0, #00BCD4, #4CAF50, #FFEB3B)" }}>
+          <div
+            className="p-0.5 rounded-full"
+            style={{
+              background:
+                "linear-gradient(135deg, #E91E8C, #9C27B0, #00BCD4, #4CAF50, #FFEB3B)",
+            }}
+          >
             <div className="rounded-full p-1" style={{ backgroundColor: "#111111" }}>
-              <Image src="/logo.png" alt="Logo" width={36} height={36}
-                className="rounded-full object-contain" />
+              <Image
+                src="/logo.png"
+                alt="Logo"
+                width={36}
+                height={36}
+                className="rounded-full object-contain"
+              />
             </div>
           </div>
           <div>
             <p className="text-white font-bold text-sm leading-tight">
               My ECG<span style={{ color: "#E91E8C" }}>Pediatric</span> Portal
             </p>
-            <p className="text-xs" style={{ color: "#E91E8C" }}>Admin Panel</p>
+            <p className="text-xs" style={{ color: "#E91E8C" }}>
+              Admin Panel
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="text-right hidden sm:block">
             <p className="text-white text-sm font-medium">{session?.user?.name}</p>
-            <p className="text-xs" style={{ color: "#E91E8C" }}>Administrator</p>
+            <p className="text-xs" style={{ color: "#E91E8C" }}>
+              Administrator
+            </p>
           </div>
-          <button onClick={() => signOut({ callbackUrl: "/login" })}
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
             className="px-4 py-2 rounded-lg text-sm font-medium text-white"
-            style={{ backgroundColor: "#E91E8C" }}>
+            style={{ backgroundColor: "#E91E8C" }}
+          >
             Sign Out
           </button>
         </div>
@@ -204,9 +233,11 @@ export default function AdminPanel() {
               Manage users, cases, and revenue
             </p>
           </div>
-          <button onClick={exportCSV}
+          <button
+            onClick={exportCSV}
             className="px-4 py-2 rounded-lg text-sm font-bold text-white flex items-center gap-2"
-            style={{ background: "linear-gradient(135deg, #4CAF50, #00BCD4)" }}>
+            style={{ background: "linear-gradient(135deg, #4CAF50, #00BCD4)" }}
+          >
             📥 Export CSV
           </button>
         </div>
@@ -214,14 +245,22 @@ export default function AdminPanel() {
         {/* Tabs */}
         <div className="flex gap-2 mb-6 flex-wrap">
           {TABS.map((tab) => (
-            <button key={tab.key}
-              onClick={() => setActiveTab(tab.key as any)}
+            <button
+              key={tab.key}
+              onClick={() => {
+                setActiveTab(tab.key as any)
+                router.push(`/admin?tab=${tab.key}`, { scroll: false })
+              }}
               className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2"
               style={{
-                backgroundColor: activeTab === tab.key ? tab.color + "22" : "#161616",
+                backgroundColor:
+                  activeTab === tab.key ? tab.color + "22" : "#161616",
                 color: activeTab === tab.key ? tab.color : "#666",
-                border: `1px solid ${activeTab === tab.key ? tab.color : "#2a2a2a"}`,
-              }}>
+                border: `1px solid ${
+                  activeTab === tab.key ? tab.color : "#2a2a2a"
+                }`,
+              }}
+            >
               {tab.icon} {tab.label}
             </button>
           ))}
@@ -248,8 +287,14 @@ export default function AdminPanel() {
                   icon: "💰",
                 },
               ].map((s) => (
-                <div key={s.label} className="rounded-xl p-5 flex flex-col gap-2"
-                  style={{ backgroundColor: "#161616", border: `1px solid ${s.color}33` }}>
+                <div
+                  key={s.label}
+                  className="rounded-xl p-5 flex flex-col gap-2"
+                  style={{
+                    backgroundColor: "#161616",
+                    border: `1px solid ${s.color}33`,
+                  }}
+                >
                   <span className="text-2xl">{s.icon}</span>
                   <p className="text-2xl font-extrabold" style={{ color: s.color }}>
                     {s.value}
@@ -260,8 +305,10 @@ export default function AdminPanel() {
             </div>
 
             {/* Revenue breakdown */}
-            <div className="rounded-xl p-6"
-              style={{ backgroundColor: "#161616", border: "1px solid #4CAF5033" }}>
+            <div
+              className="rounded-xl p-6"
+              style={{ backgroundColor: "#161616", border: "1px solid #4CAF5033" }}
+            >
               <h2 className="font-bold text-white mb-4 flex items-center gap-2">
                 <span style={{ color: "#4CAF50" }}>💰</span> Revenue Summary
               </h2>
@@ -279,12 +326,21 @@ export default function AdminPanel() {
                   },
                   {
                     label: "Net Revenue",
-                    value: `₦${(Math.max(0, (stats?.totalRevenue || 0) / 100 - 700000)).toLocaleString()}`,
+                    value: `₦${Math.max(
+                      0,
+                      (stats?.totalRevenue || 0) / 100 - 700000
+                    ).toLocaleString()}`,
                     color: "#00BCD4",
                   },
                 ].map((r) => (
-                  <div key={r.label} className="rounded-lg p-4"
-                    style={{ backgroundColor: "#1a1a1a", border: `1px solid ${r.color}33` }}>
+                  <div
+                    key={r.label}
+                    className="rounded-lg p-4"
+                    style={{
+                      backgroundColor: "#1a1a1a",
+                      border: `1px solid ${r.color}33`,
+                    }}
+                  >
                     <p className="text-gray-400 text-xs mb-1">{r.label}</p>
                     <p className="text-2xl font-extrabold" style={{ color: r.color }}>
                       {r.value}
@@ -295,12 +351,13 @@ export default function AdminPanel() {
             </div>
 
             {/* Recent payments */}
-            <div className="rounded-xl p-6"
-              style={{ backgroundColor: "#161616", border: "1px solid #00BCD433" }}>
+            <div
+              className="rounded-xl p-6"
+              style={{ backgroundColor: "#161616", border: "1px solid #00BCD433" }}
+            >
               <h2 className="font-bold text-white mb-4 flex items-center gap-2">
                 <span style={{ color: "#00BCD4" }}>💳</span> Recent Payments
               </h2>
-
               {recentPayments.length === 0 ? (
                 <p className="text-gray-400 text-sm text-center py-6">
                   No payments yet
@@ -308,11 +365,18 @@ export default function AdminPanel() {
               ) : (
                 <div className="space-y-3">
                   {recentPayments.map((p) => (
-                    <div key={p.id}
+                    <div
+                      key={p.id}
                       className="flex items-center justify-between gap-4 flex-wrap p-3 rounded-lg"
-                      style={{ backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a" }}>
+                      style={{
+                        backgroundColor: "#1a1a1a",
+                        border: "1px solid #2a2a2a",
+                      }}
+                    >
                       <div>
-                        <p className="text-white text-sm font-semibold">{p.user?.name}</p>
+                        <p className="text-white text-sm font-semibold">
+                          {p.user?.name}
+                        </p>
                         <p className="text-gray-400 text-xs">{p.user?.email}</p>
                         <p className="text-gray-500 text-xs mt-0.5">
                           Patient: {p.ecgUpload?.patient?.fullName}
@@ -325,7 +389,9 @@ export default function AdminPanel() {
                         <p className="text-gray-400 text-xs">
                           {p.paidAt
                             ? new Date(p.paidAt).toLocaleDateString("en-NG", {
-                                day: "numeric", month: "short", year: "numeric",
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
                               })
                             : "—"}
                         </p>
@@ -341,18 +407,18 @@ export default function AdminPanel() {
         {/* ── CASES TAB ── */}
         {activeTab === "cases" && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-white font-bold text-lg">
-                All Cases{" "}
-                <span className="text-sm font-normal text-gray-400">
-                  ({cases.length} total)
-                </span>
-              </h2>
-            </div>
+            <h2 className="text-white font-bold text-lg">
+              All Cases{" "}
+              <span className="text-sm font-normal text-gray-400">
+                ({cases.length} total)
+              </span>
+            </h2>
 
             {cases.length === 0 ? (
-              <div className="rounded-xl p-12 text-center"
-                style={{ backgroundColor: "#161616", border: "1px solid #2a2a2a" }}>
+              <div
+                className="rounded-xl p-12 text-center"
+                style={{ backgroundColor: "#161616", border: "1px solid #2a2a2a" }}
+              >
                 <p className="text-4xl mb-3">🫀</p>
                 <p className="text-white font-semibold">No cases yet</p>
               </div>
@@ -360,13 +426,20 @@ export default function AdminPanel() {
               cases.map((c) => {
                 const statusColor = STATUS_COLORS[c.ecgUpload?.status] || "#666"
                 return (
-                  <div key={c.id} className="rounded-xl p-5"
-                    style={{ backgroundColor: "#161616", border: `1px solid ${statusColor}33` }}>
-
+                  <div
+                    key={c.id}
+                    className="rounded-xl p-5"
+                    style={{
+                      backgroundColor: "#161616",
+                      border: `1px solid ${statusColor}33`,
+                    }}
+                  >
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
-                          style={{ backgroundColor: statusColor + "22" }}>
+                        <div
+                          className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
+                          style={{ backgroundColor: statusColor + "22" }}
+                        >
                           🫀
                         </div>
                         <div>
@@ -374,45 +447,64 @@ export default function AdminPanel() {
                             {c.ecgUpload?.patient?.fullName}
                           </p>
                           <p className="text-gray-400 text-xs mt-0.5">
-                            DOB: {new Date(c.ecgUpload?.patient?.dateOfBirth).toLocaleDateString()}
-                            {" · "}{c.ecgUpload?.patient?.gender}
+                            DOB:{" "}
+                            {new Date(
+                              c.ecgUpload?.patient?.dateOfBirth
+                            ).toLocaleDateString()}
+                            {" · "}
+                            {c.ecgUpload?.patient?.gender}
                           </p>
                           <p className="text-gray-500 text-xs mt-0.5">
                             Submitted:{" "}
                             {new Date(c.createdAt).toLocaleDateString("en-NG", {
-                              day: "numeric", month: "short", year: "numeric",
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
                             })}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex flex-col items-end gap-2">
-                        {/* Status badge */}
-                        <span className="text-xs font-bold px-3 py-1 rounded-full"
+                        <span
+                          className="text-xs font-bold px-3 py-1 rounded-full"
                           style={{
                             backgroundColor: statusColor + "22",
                             color: statusColor,
                             border: `1px solid ${statusColor}55`,
-                          }}>
+                          }}
+                        >
                           {c.ecgUpload?.status}
                         </span>
-
-                        {/* Priority */}
-                        <span className="text-xs px-2 py-0.5 rounded-full"
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full"
                           style={{
-                            backgroundColor: c.priority === "URGENT" ? "#E91E8C22" : "#00BCD422",
-                            color: c.priority === "URGENT" ? "#E91E8C" : "#00BCD4",
-                            border: `1px solid ${c.priority === "URGENT" ? "#E91E8C55" : "#00BCD455"}`,
-                          }}>
+                            backgroundColor:
+                              c.priority === "URGENT" ? "#E91E8C22" : "#00BCD422",
+                            color:
+                              c.priority === "URGENT" ? "#E91E8C" : "#00BCD4",
+                            border: `1px solid ${
+                              c.priority === "URGENT" ? "#E91E8C55" : "#00BCD455"
+                            }`,
+                          }}
+                        >
                           {c.priority === "URGENT" ? "⚡ Urgent" : "📋 Standard"}
                         </span>
-
-                        {/* Payment */}
                         {c.ecgUpload?.payment && (
-                          <span className="text-xs"
-                            style={{ color: c.ecgUpload.payment.status === "success" ? "#4CAF50" : "#FFEB3B" }}>
+                          <span
+                            className="text-xs"
+                            style={{
+                              color:
+                                c.ecgUpload.payment.status === "success"
+                                  ? "#4CAF50"
+                                  : "#FFEB3B",
+                            }}
+                          >
                             ₦{(c.ecgUpload.payment.amount / 100).toLocaleString()}{" "}
-                            · {c.ecgUpload.payment.status === "success" ? "Paid" : "Unpaid"}
+                            ·{" "}
+                            {c.ecgUpload.payment.status === "success"
+                              ? "Paid"
+                              : "Unpaid"}
                           </span>
                         )}
                       </div>
@@ -422,13 +514,14 @@ export default function AdminPanel() {
                     <div className="mt-4 flex flex-wrap items-center gap-3">
                       <div className="flex items-center gap-2">
                         <span className="text-gray-400 text-xs">Assigned to:</span>
-                        <span className="text-sm font-medium"
-                          style={{ color: c.doctor ? "#9C27B0" : "#666" }}>
+                        <span
+                          className="text-sm font-medium"
+                          style={{ color: c.doctor ? "#9C27B0" : "#666" }}
+                        >
                           {c.doctor ? `Dr. ${c.doctor.name}` : "Unassigned"}
                         </span>
                       </div>
 
-                      {/* Assign dropdown */}
                       {!c.interpretation && doctors.length > 0 && (
                         <div className="flex items-center gap-2">
                           <select
@@ -439,7 +532,10 @@ export default function AdminPanel() {
                               }
                             }}
                             className="text-xs rounded-lg px-3 py-1.5 text-white focus:outline-none"
-                            style={{ backgroundColor: "#222", border: "1px solid #9C27B055" }}
+                            style={{
+                              backgroundColor: "#222",
+                              border: "1px solid #9C27B055",
+                            }}
                           >
                             <option value="">Assign doctor...</option>
                             {doctors.map((d) => (
@@ -457,18 +553,31 @@ export default function AdminPanel() {
                       )}
 
                       {c.interpretation && (
-                        <span className="text-xs font-bold px-3 py-1 rounded-lg"
-                          style={{ backgroundColor: "#4CAF5022", color: "#4CAF50", border: "1px solid #4CAF5055" }}>
+                        <span
+                          className="text-xs font-bold px-3 py-1 rounded-lg"
+                          style={{
+                            backgroundColor: "#4CAF5022",
+                            color: "#4CAF50",
+                            border: "1px solid #4CAF5055",
+                          }}
+                        >
                           ✅ Interpretation Complete
                         </span>
                       )}
                     </div>
 
-                    {/* ECG link */}
                     {c.ecgUpload?.fileUrl && (
-                      <a href={c.ecgUpload.fileUrl} target="_blank" rel="noopener noreferrer"
+                      <a
+                        href={c.ecgUpload.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
-                        style={{ backgroundColor: "#00BCD422", color: "#00BCD4", border: "1px solid #00BCD433" }}>
+                        style={{
+                          backgroundColor: "#00BCD422",
+                          color: "#00BCD4",
+                          border: "1px solid #00BCD433",
+                        }}
+                      >
                         📎 View ECG File
                       </a>
                     )}
@@ -482,14 +591,12 @@ export default function AdminPanel() {
         {/* ── USERS TAB ── */}
         {activeTab === "users" && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-white font-bold text-lg">
-                All Users{" "}
-                <span className="text-sm font-normal text-gray-400">
-                  ({users.length} total)
-                </span>
-              </h2>
-            </div>
+            <h2 className="text-white font-bold text-lg">
+              All Users{" "}
+              <span className="text-sm font-normal text-gray-400">
+                ({users.length} total)
+              </span>
+            </h2>
 
             {/* Role summary */}
             <div className="grid grid-cols-3 gap-3 mb-2">
@@ -498,8 +605,14 @@ export default function AdminPanel() {
                 { role: "DOCTOR",  color: "#9C27B0", icon: "👨‍⚕️" },
                 { role: "ADMIN",   color: "#E91E8C", icon: "🛡" },
               ].map((r) => (
-                <div key={r.role} className="rounded-xl p-4 text-center"
-                  style={{ backgroundColor: "#161616", border: `1px solid ${r.color}33` }}>
+                <div
+                  key={r.role}
+                  className="rounded-xl p-4 text-center"
+                  style={{
+                    backgroundColor: "#161616",
+                    border: `1px solid ${r.color}33`,
+                  }}
+                >
                   <p className="text-xl mb-1">{r.icon}</p>
                   <p className="text-xl font-extrabold" style={{ color: r.color }}>
                     {users.filter((u) => u.role === r.role).length}
@@ -515,12 +628,23 @@ export default function AdminPanel() {
             {users.map((u) => {
               const roleColor = ROLE_COLORS[u.role] || "#666"
               return (
-                <div key={u.id} className="rounded-xl p-4"
-                  style={{ backgroundColor: "#161616", border: `1px solid ${roleColor}22` }}>
+                <div
+                  key={u.id}
+                  className="rounded-xl p-4"
+                  style={{
+                    backgroundColor: "#161616",
+                    border: `1px solid ${roleColor}22`,
+                  }}
+                >
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
-                        style={{ backgroundColor: roleColor + "22", color: roleColor }}>
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
+                        style={{
+                          backgroundColor: roleColor + "22",
+                          color: roleColor,
+                        }}
+                      >
                         {u.name?.charAt(0).toUpperCase()}
                       </div>
                       <div>
@@ -529,7 +653,9 @@ export default function AdminPanel() {
                         <p className="text-gray-500 text-xs mt-0.5">
                           Joined:{" "}
                           {new Date(u.createdAt).toLocaleDateString("en-NG", {
-                            day: "numeric", month: "short", year: "numeric",
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
                           })}
                           {u.role === "PATIENT" &&
                             ` · ${u._count?.payments || 0} payments`}
@@ -540,17 +666,17 @@ export default function AdminPanel() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      {/* Role badge */}
-                      <span className="text-xs font-bold px-3 py-1 rounded-full"
+                      <span
+                        className="text-xs font-bold px-3 py-1 rounded-full"
                         style={{
                           backgroundColor: roleColor + "22",
                           color: roleColor,
                           border: `1px solid ${roleColor}55`,
-                        }}>
+                        }}
+                      >
                         {u.role}
                       </span>
 
-                      {/* Change role — don't allow changing own role */}
                       {u.id !== session?.user?.id && (
                         <select
                           value={u.role}
@@ -582,5 +708,13 @@ export default function AdminPanel() {
         )}
       </main>
     </div>
+  )
+}
+
+export default function AdminPanel() {
+  return (
+    <Suspense>
+      <AdminPanelContent />
+    </Suspense>
   )
 }

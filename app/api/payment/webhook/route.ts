@@ -1,11 +1,12 @@
- // app/api/payment/webhook/route.ts
+// app/api/payment/webhook/route.ts
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { sendCaseSubmittedEmail } from "@/lib/email"
 import crypto from "crypto"
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.text()
+    const body      = await req.text()
     const signature = req.headers.get("x-paystack-signature")
 
     // Verify webhook signature
@@ -26,25 +27,40 @@ export async function POST(req: NextRequest) {
       // Update payment status
       await prisma.payment.update({
         where: { reference },
-        data: { status: "success", paidAt: new Date() },
+        data:  { status: "success", paidAt: new Date() },
       })
 
-      // Update ECG upload status
+      // Update ECG upload status to PAID
       await prisma.eCGUpload.update({
         where: { id: metadata.ecgUploadId },
-        data: { status: "PAID" },
+        data:  { status: "PAID" },
       })
 
       // Auto-create a case
       await prisma.case.create({
         data: {
           ecgUploadId: metadata.ecgUploadId,
-          priority: metadata.tier === "URGENT" ? "URGENT" : "STANDARD",
+          priority:    metadata.tier === "URGENT" ? "URGENT" : "STANDARD",
         },
       })
+
+      // Send confirmation email AFTER payment confirmed
+      try {
+        if (metadata.userEmail && metadata.userName) {
+          await sendCaseSubmittedEmail(
+            metadata.userEmail,
+            metadata.userName,
+            metadata.patientName,
+            metadata.tier
+          )
+        }
+      } catch (emailErr) {
+        console.error("Case submitted email failed:", emailErr)
+      }
     }
 
     return NextResponse.json({ received: true })
+
   } catch (error) {
     console.error("Webhook error:", error)
     return NextResponse.json(
