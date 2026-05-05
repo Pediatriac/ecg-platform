@@ -4,6 +4,13 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 
+console.log("NextAuth init:", {
+  NEXTAUTH_URL: process.env.NEXTAUTH_URL ? "SET" : "NOT SET",
+  NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET ? "SET" : "NOT SET",
+  DATABASE_URL: process.env.DATABASE_URL ? "SET" : "NOT SET",
+  NODE_ENV: process.env.NODE_ENV,
+})
+
 const authOptions = {
   providers: [
     CredentialsProvider({
