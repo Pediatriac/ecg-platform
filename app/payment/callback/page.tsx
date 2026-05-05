@@ -82,7 +82,7 @@ function CallbackContent() {
         >
           <div className="rounded-full p-2" style={{ backgroundColor: "#161616" }}>
             <Image
-              src="/logo.png"
+              src="/image/xseve.png"
               alt="Logo"
               width={60}
               height={60}
