@@ -3,12 +3,33 @@ import { Resend } from "resend"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM   = process.env.EMAIL_FROM || "onboarding@resend.dev"
-const DEV_TO = process.env.RESEND_TEST_EMAIL
+const TEST_TO = process.env.RESEND_TEST_EMAIL
+const USE_TEST_TO = process.env.USE_TEST_TO === "true"
 
-// In development — all emails go to RESEND_TEST_EMAIL
-// In production — emails go to the actual recipient
-function getTo(email: string): string {
-  return process.env.NODE_ENV === "production" ? email : (DEV_TO || email)
+function getRecipients(email: string): string[] {
+  const recipients = [email]
+  if (process.env.NODE_ENV !== "production" && USE_TEST_TO && TEST_TO) {
+    recipients.push(TEST_TO)
+  }
+  return Array.from(new Set(recipients))
+}
+
+async function sendEmail(options: {
+  to: string
+  subject: string
+  html: string
+}) {
+  const recipients = getRecipients(options.to)
+  return Promise.all(
+    recipients.map((recipient) =>
+      resend.emails.send({
+        from:    FROM,
+        to:      recipient,
+        subject: options.subject,
+        html:    options.html,
+      })
+    )
+  )
 }
 
 function baseTemplate(content: string) {
@@ -119,9 +140,8 @@ export async function sendWelcomeEmail(to: string, name: string) {
     </a>
   `
 
-  return resend.emails.send({
-    from:    FROM,
-    to:      getTo(to),
+  return sendEmail({
+    to:      to,
     subject: "Welcome to My ECGPediatric Portal 🫀",
     html:    baseTemplate(content),
   })
@@ -190,9 +210,8 @@ export async function sendCaseSubmittedEmail(
     </a>
   `
 
-  return resend.emails.send({
-    from:    FROM,
-    to:      getTo(to),
+  return sendEmail({
+    to:      to,
     subject: `ECG Submitted for ${patientName} — Payment Confirmed 💳`,
     html:    baseTemplate(content),
   })
@@ -264,14 +283,57 @@ export async function sendDoctorAssignedEmail(
     </a>
   `
 
-  return resend.emails.send({
-    from:    FROM,
-    to:      getTo(to),
+  return sendEmail({
+    to:      to,
     subject: `${priority === "URGENT" ? "⚡ URGENT: " : ""}New ECG Case — ${patientName}`,
     html:    baseTemplate(content),
   })
 }
+// ── Email verification ────────────────────────────────────────
+export async function sendVerificationEmail(
+  to:    string,
+  name:  string,
+  token: string
+) {
+  const verifyUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify?token=${token}`
 
+  const content = `
+    <h2 style="color:#E91E8C;margin:0 0 8px;">Verify Your Email 📧</h2>
+    <p style="color:#ccc;font-size:15px;line-height:1.6;margin:0 0 20px;">
+      Hi ${name}, thanks for registering on My ECGPediatric Portal.
+      Please verify your email address to activate your account.
+    </p>
+
+    <div style="background:#1a1a1a;border-radius:12px;padding:20px;
+      margin:0 0 24px;border:1px solid #E91E8C33;">
+      <p style="color:#888;font-size:13px;margin:0 0 8px;">
+        Click the button below to verify your email:
+      </p>
+      <p style="color:#666;font-size:12px;margin:0;">
+        This link expires in <strong style="color:#FFEB3B;">24 hours</strong>.
+      </p>
+    </div>
+
+    <a href="${verifyUrl}"
+      style="display:block;text-align:center;
+        background:linear-gradient(135deg,#E91E8C,#9C27B0);
+        color:white;text-decoration:none;padding:16px 24px;
+        border-radius:10px;font-weight:bold;font-size:16px;
+        margin-bottom:16px;">
+      ✅ Verify My Email Address
+    </a>
+
+    <p style="color:#555;font-size:12px;text-align:center;margin:0;">
+      If you didn't create this account, ignore this email.
+    </p>
+  `
+
+  return sendEmail({
+    to:      to,
+    subject: "Verify your email — My ECGPediatric Portal",
+    html:    baseTemplate(content),
+  })
+}
 // ── Report ready notification to patient ─────────────────────────
 export async function sendReportReadyEmail(
   to:          string,

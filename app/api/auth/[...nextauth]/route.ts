@@ -1,5 +1,5 @@
 // app/api/auth/[...nextauth]/route.ts
-import NextAuth from "next-auth"
+import NextAuth, { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
@@ -11,7 +11,7 @@ console.log("NextAuth init:", {
   NODE_ENV: process.env.NODE_ENV,
 })
 
-const authOptions = {
+const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -50,17 +50,17 @@ const authOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }: any) {
+    async jwt({ token, user }) {
       if (user) {
         token.id   = user.id
         token.role = user.role
       }
       return token
     },
-    async session({ session, token }: any) {
-      if (token) {
-        session.user.id   = token.id
-        session.user.role = token.role
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id   = token.id as string
+        session.user.role = token.role as string
       }
       return session
     },
@@ -73,7 +73,6 @@ const authOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET,
 }
-
 const handler = NextAuth(authOptions)
 export { handler as GET, handler as POST }
 export { authOptions }

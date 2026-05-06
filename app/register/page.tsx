@@ -88,7 +88,7 @@ export default function RegisterPage() {
           >
             <div className="rounded-full p-3" style={{ backgroundColor: "#111111" }}>
               <Image
-                src="/logo.png"
+                src="/image/xseve.png"
                 alt="X-Serve Children's Hospital"
                 width={130}
                 height={130}
@@ -172,8 +172,8 @@ export default function RegisterPage() {
             >
               <div className="rounded-full p-2" style={{ backgroundColor: "#161616" }}>
                 <Image
-                  src="/logo.png"
-                  alt="Logo"
+                  src="/image/xseve.png"
+                  alt="X-Serve Children's Hospital"
                   width={70}
                   height={70}
                   className="rounded-full object-contain"
