@@ -389,9 +389,8 @@ export async function sendReportReadyEmail(
     </a>
   `
 
-  return resend.emails.send({
-    from:    FROM,
-    to:      getTo(to),
+  return sendEmail({
+    to:      to,
     subject: `ECG Report Ready for ${patientName} 📄`,
     html:    baseTemplate(content),
   })
