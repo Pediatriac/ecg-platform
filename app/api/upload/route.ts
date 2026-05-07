@@ -46,8 +46,25 @@ function validateTier(tier: string): tier is Tier {
 
 export async function POST(req: NextRequest) {
   try {
+    // Check environment variables first
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      console.error("Missing Cloudinary environment variables")
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
+    }
+
+    if (!process.env.PAYSTACK_SECRET_KEY) {
+      console.error("Missing Paystack secret key")
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
+    }
+
+    if (!process.env.NEXTAUTH_URL) {
+      console.error("Missing NEXTAUTH_URL")
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
+    }
+
     const session = await getServerSession(authOptions)
     if (!session) {
+      console.error("No session found")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -103,10 +120,16 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(bytes)
     const base64 = `data:${file.type};base64,${buffer.toString("base64")}`
 
-    const uploaded = await cloudinary.uploader.upload(base64, {
-      folder:        "ecg-reports",
-      resource_type: "auto",
-    })
+    let uploaded
+    try {
+      uploaded = await cloudinary.uploader.upload(base64, {
+        folder:        "ecg-reports",
+        resource_type: "auto",
+      })
+    } catch (cloudinaryError) {
+      console.error("Cloudinary upload error:", cloudinaryError)
+      return NextResponse.json({ error: "File upload failed" }, { status: 500 })
+    }
 
     // Use transaction for atomic operations
     const result = await prisma.$transaction(async (tx) => {
@@ -160,31 +183,39 @@ export async function POST(req: NextRequest) {
     })
 
     // Initialize Paystack payment
-    const paystackRes = await fetch(
-      "https://api.paystack.co/transaction/initialize",
-      {
-        method:  "POST",
-        headers: {
-          Authorization:  `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email:        session.user.email,
-          amount:       result.amount,
-          reference:    result.reference,
-          callback_url: `${process.env.NEXTAUTH_URL}/payment/callback`,
-          metadata: {
-            ecgUploadId: result.ecgUpload.id,
-            patientName: fullName,
-            tier,
-            userName:    session.user.name,
-            userEmail:   session.user.email,
+    let paystackRes
+    try {
+      paystackRes = await fetch(
+        "https://api.paystack.co/transaction/initialize",
+        {
+          method:  "POST",
+          headers: {
+            Authorization:  `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+            "Content-Type": "application/json",
           },
-        }),
-      }
-    )
+          body: JSON.stringify({
+            email:        session.user.email,
+            amount:       result.amount,
+            reference:    result.reference,
+            callback_url: `${process.env.NEXTAUTH_URL}/payment/callback`,
+            metadata: {
+              ecgUploadId: result.ecgUpload.id,
+              patientName: fullName,
+              tier,
+              userName:    session.user.name,
+              userEmail:   session.user.email,
+            },
+          }),
+        }
+      )
+    } catch (fetchError) {
+      console.error("Paystack API fetch error:", fetchError)
+      return NextResponse.json({ error: "Payment initialization failed" }, { status: 500 })
+    }
 
     if (!paystackRes.ok) {
+      const errorText = await paystackRes.text()
+      console.error(`Paystack API error: ${paystackRes.status} - ${errorText}`)
       throw new Error(`Paystack API error: ${paystackRes.status}`)
     }
 
