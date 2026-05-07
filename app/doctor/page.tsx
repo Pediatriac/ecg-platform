@@ -27,6 +27,7 @@ export default function DoctorDashboard() {
   const [loading, setLoading]           = useState(true)
   const [selectedCase, setSelectedCase] = useState<any>(null)
   const [submitting, setSubmitting]     = useState(false)
+  const [resendingId, setResendingId]   = useState<string | null>(null)
   const [success, setSuccess]           = useState("")
   const [error, setError]               = useState("")
   const [activeTab, setActiveTab]       = useState<"queue" | "completed">("queue")
@@ -101,6 +102,30 @@ export default function DoctorDashboard() {
     })
     fetchCases()
     setSubmitting(false)
+    setTimeout(() => setSuccess(""), 4000)
+  }
+
+  async function handleResendReport(caseId: string) {
+    setResendingId(caseId)
+    setError("")
+    setSuccess("")
+
+    const res = await fetch("/api/doctor/resend-report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ caseId }),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      setError(data.error || "Failed to resend report")
+      setResendingId(null)
+      return
+    }
+
+    setSuccess("Report notification resent to patient.")
+    setResendingId(null)
     setTimeout(() => setSuccess(""), 4000)
   }
 
@@ -319,7 +344,7 @@ export default function DoctorDashboard() {
                         )}
 
                         {/* Action buttons */}
-                        <div className="flex gap-2 mt-3">
+                        <div className="flex flex-wrap gap-2 mt-3">
                           {!isAssigned && !c.interpretation && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleAssign(c.id) }}
@@ -337,10 +362,24 @@ export default function DoctorDashboard() {
                             </button>
                           )}
                           {c.interpretation && (
-                            <span className="text-xs font-bold px-3 py-1.5 rounded-lg"
-                              style={{ backgroundColor: "#4CAF5022", color: "#4CAF50", border: "1px solid #4CAF5055" }}>
-                              ✅ Interpreted
-                            </span>
+                            <>
+                              <span className="text-xs font-bold px-3 py-1.5 rounded-lg"
+                                style={{ backgroundColor: "#4CAF5022", color: "#4CAF50", border: "1px solid #4CAF5055" }}>
+                                ✅ Interpreted
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleResendReport(c.id)
+                                }}
+                                disabled={resendingId === c.id}
+                                className="text-xs font-bold px-3 py-1.5 rounded-lg text-white"
+                                style={{
+                                  backgroundColor: resendingId === c.id ? "#555" : "#00BCD4",
+                                }}>
+                                {resendingId === c.id ? "Resending..." : "🔁 Resend Report"}
+                              </button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -409,123 +448,160 @@ export default function DoctorDashboard() {
                   </a>
                 )}
 
-                {/* Interpretation form */}
-                <form onSubmit={handleSubmitInterpretation} className="space-y-4">
-
-                  {/* ECG Parameters */}
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wider mb-2"
-                      style={{ color: "#00BCD4" }}>
-                      ECG Parameters
-                    </p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {[
-                        { name: "rhythm",    label: "Rhythm",    placeholder: "e.g. Sinus rhythm", color: "#E91E8C" },
-                        { name: "rate",      label: "Heart Rate",placeholder: "e.g. 72 bpm",       color: "#9C27B0" },
-                        { name: "axis",      label: "Axis",      placeholder: "e.g. Normal axis",  color: "#00BCD4" },
-                        { name: "intervals", label: "Intervals", placeholder: "e.g. PR 160ms",     color: "#4CAF50" },
-                      ].map((f) => (
-                        <div key={f.name}>
-                          <label className="block text-xs font-medium mb-1"
-                            style={{ color: f.color }}>
-                            {f.label}
-                          </label>
-                          <input
-                            type="text"
-                            value={form[f.name as keyof typeof form]}
-                            onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
-                            placeholder={f.placeholder}
-                            className="w-full rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none"
-                            style={{ backgroundColor: "#222222", border: "1px solid #333333" }}
-                          />
+                {selectedCase.interpretation ? (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="grid gap-4 sm:grid-cols-2 flex-1">
+                        <div className="rounded-2xl bg-[#111111] p-5">
+                          <p className="text-xs uppercase tracking-[0.24em] text-gray-500">Risk Level</p>
+                          <p className="mt-2 text-white">{selectedCase.interpretation.riskLevel}</p>
                         </div>
-                      ))}
+                        <div className="rounded-2xl bg-[#111111] p-5">
+                          <p className="text-xs uppercase tracking-[0.24em] text-gray-500">Doctor</p>
+                          <p className="mt-2 text-white">{selectedCase.doctor?.name || "Assigned doctor"}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleResendReport(selectedCase.id)}
+                        disabled={resendingId === selectedCase.id}
+                        className="min-w-[180px] rounded-lg px-4 py-3 text-sm font-bold text-white"
+                        style={{
+                          backgroundColor: resendingId === selectedCase.id ? "#555" : "#00BCD4",
+                        }}>
+                        {resendingId === selectedCase.id ? "Resending..." : "🔁 Resend Report to Patient"}
+                      </button>
+                    </div>
+                    <div className="rounded-2xl bg-[#111111] p-5">
+                      <p className="text-sm text-white font-semibold">Findings</p>
+                      <p className="mt-2 text-gray-300 whitespace-pre-line">{selectedCase.interpretation.findings}</p>
+                    </div>
+                    <div className="rounded-2xl bg-[#111111] p-5">
+                      <p className="text-sm text-white font-semibold">Conclusion</p>
+                      <p className="mt-2 text-gray-300 whitespace-pre-line">{selectedCase.interpretation.conclusion}</p>
+                    </div>
+                    <div className="rounded-2xl bg-[#111111] p-5">
+                      <p className="text-sm text-white font-semibold">Recommendations</p>
+                      <p className="mt-2 text-gray-300 whitespace-pre-line">{selectedCase.interpretation.recommendations || "No recommendations provided."}</p>
                     </div>
                   </div>
+                ) : (
+                  <form onSubmit={handleSubmitInterpretation} className="space-y-4">
 
-                  {/* Findings */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1"
-                      style={{ color: "#FFEB3B" }}>
-                      Findings <span style={{ color: "#E91E8C" }}>*</span>
-                    </label>
-                    <textarea
-                      required
-                      rows={3}
-                      value={form.findings}
-                      onChange={(e) => setForm({ ...form, findings: e.target.value })}
-                      placeholder="Describe ECG findings in detail..."
-                      className="w-full rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none resize-none"
-                      style={{ backgroundColor: "#222222", border: "1px solid #333333" }}
-                    />
-                  </div>
-
-                  {/* Conclusion */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1"
-                      style={{ color: "#9C27B0" }}>
-                      Conclusion <span style={{ color: "#E91E8C" }}>*</span>
-                    </label>
-                    <textarea
-                      required
-                      rows={2}
-                      value={form.conclusion}
-                      onChange={(e) => setForm({ ...form, conclusion: e.target.value })}
-                      placeholder="Clinical conclusion and diagnosis..."
-                      className="w-full rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none resize-none"
-                      style={{ backgroundColor: "#222222", border: "1px solid #333333" }}
-                    />
-                  </div>
-
-                  {/* Recommendations */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1"
-                      style={{ color: "#4CAF50" }}>
-                      Recommendations
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={form.recommendations}
-                      onChange={(e) => setForm({ ...form, recommendations: e.target.value })}
-                      placeholder="Follow-up actions, referrals, medications..."
-                      className="w-full rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none resize-none"
-                      style={{ backgroundColor: "#222222", border: "1px solid #333333" }}
-                    />
-                  </div>
-
-                  {/* Risk Level */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-2"
-                      style={{ color: "#E91E8C" }}>
-                      Risk Level <span style={{ color: "#E91E8C" }}>*</span>
-                    </label>
-                    <div className="grid grid-cols-5 gap-2">
-                      {RISK_LEVELS.map((r) => (
-                        <button key={r.value} type="button"
-                          onClick={() => setForm({ ...form, riskLevel: r.value })}
-                          className="py-2 rounded-lg text-xs font-bold transition-all"
-                          style={{
-                            backgroundColor: form.riskLevel === r.value ? r.color + "33" : "#1a1a1a",
-                            color: form.riskLevel === r.value ? r.color : "#666",
-                            border: `1px solid ${form.riskLevel === r.value ? r.color : "#333"}`,
-                          }}>
-                          {r.label}
-                        </button>
-                      ))}
+                    {/* ECG Parameters */}
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider mb-2"
+                        style={{ color: "#00BCD4" }}>
+                        ECG Parameters
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { name: "rhythm",    label: "Rhythm",    placeholder: "e.g. Sinus rhythm", color: "#E91E8C" },
+                          { name: "rate",      label: "Heart Rate",placeholder: "e.g. 72 bpm",       color: "#9C27B0" },
+                          { name: "axis",      label: "Axis",      placeholder: "e.g. Normal axis",  color: "#00BCD4" },
+                          { name: "intervals", label: "Intervals", placeholder: "e.g. PR 160ms",     color: "#4CAF50" },
+                        ].map((f) => (
+                          <div key={f.name}>
+                            <label className="block text-xs font-medium mb-1"
+                              style={{ color: f.color }}>
+                              {f.label}
+                            </label>
+                            <input
+                              type="text"
+                              value={form[f.name as keyof typeof form]}
+                              onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
+                              placeholder={f.placeholder}
+                              className="w-full rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none"
+                              style={{ backgroundColor: "#222222", border: "1px solid #333333" }}
+                            />
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Submit */}
-                  <button type="submit" disabled={submitting}
-                    className="w-full py-3 rounded-xl text-white font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{
-                      background: submitting
-                        ? "#555"
-                        : "linear-gradient(135deg, #E91E8C 0%, #9C27B0 50%, #00BCD4 100%)",
-                    }}>
-                    {submitting ? "Submitting..." : "Submit Interpretation →"}
-                  </button>
-                </form>
+                    {/* Findings */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-1"
+                        style={{ color: "#FFEB3B" }}>
+                        Findings <span style={{ color: "#E91E8C" }}>*</span>
+                      </label>
+                      <textarea
+                        required
+                        rows={3}
+                        value={form.findings}
+                        onChange={(e) => setForm({ ...form, findings: e.target.value })}
+                        placeholder="Describe ECG findings in detail..."
+                        className="w-full rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none resize-none"
+                        style={{ backgroundColor: "#222222", border: "1px solid #333333" }}
+                      />
+                    </div>
+
+                    {/* Conclusion */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-1"
+                        style={{ color: "#9C27B0" }}>
+                        Conclusion <span style={{ color: "#E91E8C" }}>*</span>
+                      </label>
+                      <textarea
+                        required
+                        rows={2}
+                        value={form.conclusion}
+                        onChange={(e) => setForm({ ...form, conclusion: e.target.value })}
+                        placeholder="Clinical conclusion and diagnosis..."
+                        className="w-full rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none resize-none"
+                        style={{ backgroundColor: "#222222", border: "1px solid #333333" }}
+                      />
+                    </div>
+
+                    {/* Recommendations */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-1"
+                        style={{ color: "#4CAF50" }}>
+                        Recommendations
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={form.recommendations}
+                        onChange={(e) => setForm({ ...form, recommendations: e.target.value })}
+                        placeholder="Follow-up actions, referrals, medications..."
+                        className="w-full rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none resize-none"
+                        style={{ backgroundColor: "#222222", border: "1px solid #333333" }}
+                      />
+                    </div>
+
+                    {/* Risk Level */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-2"
+                        style={{ color: "#E91E8C" }}>
+                        Risk Level <span style={{ color: "#E91E8C" }}>*</span>
+                      </label>
+                      <div className="grid grid-cols-5 gap-2">
+                        {RISK_LEVELS.map((r) => (
+                          <button key={r.value} type="button"
+                            onClick={() => setForm({ ...form, riskLevel: r.value })}
+                            className="py-2 rounded-lg text-xs font-bold transition-all"
+                            style={{
+                              backgroundColor: form.riskLevel === r.value ? r.color + "33" : "#1a1a1a",
+                              color: form.riskLevel === r.value ? r.color : "#666",
+                              border: `1px solid ${form.riskLevel === r.value ? r.color : "#333"}`,
+                            }}>
+                            {r.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Submit */}
+                    <button type="submit" disabled={submitting}
+                      className="w-full py-3 rounded-xl text-white font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{
+                        background: submitting
+                          ? "#555"
+                          : "linear-gradient(135deg, #E91E8C 0%, #9C27B0 50%, #00BCD4 100%)",
+                      }}>
+                      {submitting ? "Submitting..." : "Submit Interpretation →"}
+                    </button>
+                  </form>
+                )}
               </div>
             )}
           </div>

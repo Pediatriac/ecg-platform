@@ -1,8 +1,8 @@
- // app/api/admin/cases/route.ts
-import { NextRequest, NextResponse } from "next/server"
+ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { prisma } from "@/lib/prisma"
+import { sendDoctorAssignedEmail } from "@/lib/email"
 
 export async function GET(req: NextRequest) {
   try {
@@ -61,6 +61,37 @@ export async function PATCH(req: NextRequest) {
       where: { id: updated.ecgUploadId },
       data: { status: "ASSIGNED" },
     })
+
+    // Send notification email to doctor (non-blocking)
+    try {
+      const caseData = await prisma.case.findUnique({
+        where: { id: caseId },
+        include: {
+          ecgUpload: {
+            include: {
+              patient: true,
+            },
+          },
+          doctor: true,
+        },
+      })
+
+      if (caseData?.doctor && caseData?.ecgUpload?.patient) {
+        await sendDoctorAssignedEmail(
+          caseData.doctor.email,
+          caseData.doctor.name,
+          caseData.ecgUpload.patient.fullName,
+          new Date(caseData.ecgUpload.patient.dateOfBirth).toLocaleDateString(),
+          caseData.ecgUpload.patient.gender,
+          caseData.ecgUpload.patient.symptoms || "",
+          caseData.priority,
+          caseData.ecgUpload.fileUrl
+        )
+      }
+    } catch (emailErr) {
+      console.error("Doctor assignment email failed:", emailErr)
+      // Don't fail the assignment if email fails
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

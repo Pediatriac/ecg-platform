@@ -14,7 +14,7 @@ function getRecipients(email: string): string[] {
   return Array.from(new Set(recipients))
 }
 
-async function sendEmail(options: {
+export async function sendEmail(options: {
   to: string
   subject: string
   html: string

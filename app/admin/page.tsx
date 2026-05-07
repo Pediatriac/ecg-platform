@@ -32,9 +32,8 @@ function AdminPanelContent() {
   const [cases, setCases]               = useState<any[]>([])
   const [doctors, setDoctors]           = useState<any[]>([])
   const [loading, setLoading]           = useState(true)
-  const [assigning, setAssigning]       = useState<string | null>(null)
-  const [updatingRole, setUpdatingRole] = useState<string | null>(null)
-  const [toast, setToast]               = useState("")
+  const [selectedCases, setSelectedCases] = useState<string[]>([])
+  const [bulkAssigning, setBulkAssigning] = useState(false)
 
   // Read tab from URL
   useEffect(() => {
@@ -75,18 +74,23 @@ function AdminPanelContent() {
     setLoading(false)
   }
 
-  async function handleAssignDoctor(caseId: string, doctorId: string) {
-    setAssigning(caseId)
-    const res = await fetch("/api/admin/cases", {
-      method:  "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ caseId, doctorId }),
-    })
-    if (res.ok) {
-      showToast("Case assigned successfully!")
+  async function handleBulkAssign(caseIds: string[], doctorId: string) {
+    setBulkAssigning(true)
+    try {
+      const promises = caseIds.map(caseId =>
+        fetch("/api/admin/cases", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ caseId, doctorId }),
+        })
+      )
+      await Promise.all(promises)
+      showToast(`${caseIds.length} cases assigned successfully!`)
       loadAll()
+    } catch (error) {
+      showToast("Failed to assign some cases")
     }
-    setAssigning(null)
+    setBulkAssigning(false)
   }
 
   async function handleRoleChange(userId: string, role: string) {
@@ -179,7 +183,7 @@ function AdminPanelContent() {
           >
             <div className="rounded-full p-1" style={{ backgroundColor: "#111111" }}>
               <Image
-                src="/logo.png"
+                src="/image/xseve.png"
                 alt="Logo"
                 width={36}
                 height={36}
@@ -407,12 +411,62 @@ function AdminPanelContent() {
         {/* ── CASES TAB ── */}
         {activeTab === "cases" && (
           <div className="space-y-4">
-            <h2 className="text-white font-bold text-lg">
-              All Cases{" "}
-              <span className="text-sm font-normal text-gray-400">
-                ({cases.length} total)
-              </span>
-            </h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <h2 className="text-white font-bold text-lg">
+                All Cases{" "}
+                <span className="text-sm font-normal text-gray-400">
+                  ({cases.length} total)
+                </span>
+              </h2>
+              <div className="flex items-center gap-3">
+                {selectedCases.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-400">
+                      {selectedCases.length} selected
+                    </span>
+                    <button
+                      onClick={() => setSelectedCases([])}
+                      className="text-xs text-gray-400 hover:text-white"
+                    >
+                      Clear
+                    </button>
+                    <select
+                      onChange={async (e) => {
+                        if (!e.target.value) return
+                        await handleBulkAssign(selectedCases, e.target.value)
+                        setSelectedCases([])
+                        e.target.value = ""
+                      }}
+                      disabled={bulkAssigning}
+                      className="text-xs rounded-lg px-3 py-1.5 text-white focus:outline-none"
+                      style={{
+                        backgroundColor: "#222",
+                        border: "1px solid #9C27B055",
+                      }}
+                    >
+                      <option value="">Bulk assign to...</option>
+                      {doctors.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          Dr. {d.name}
+                        </option>
+                      ))}
+                    </select>
+                    {bulkAssigning && (
+                      <span className="text-xs" style={{ color: "#9C27B0" }}>
+                        Assigning...
+                      </span>
+                    )}
+                  </div>
+                )}
+                <button
+                  onClick={() => router.push("/doctor")}
+                  className="px-4 py-2 rounded-lg text-sm font-bold text-white flex items-center gap-2"
+                  style={{ background: "linear-gradient(135deg, #9C27B0, #E91E8C)" }}
+                >
+                  👨‍⚕️ Open Doctor Dashboard
+                </button>
+              </div>
+            </div>
 
             {cases.length === 0 ? (
               <div
@@ -423,19 +477,102 @@ function AdminPanelContent() {
                 <p className="text-white font-semibold">No cases yet</p>
               </div>
             ) : (
-              cases.map((c) => {
+              <div className="space-y-4">
+                {/* ── Prominent Assignment Section ── */}
+                {cases.some(c => !c.interpretation && !c.doctor) && (
+                  <div
+                    className="rounded-xl p-6 border-l-4"
+                    style={{
+                      backgroundColor: "#161616",
+                      borderColor: "#9C27B0",
+                    }}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div>
+                        <h3 className="text-lg font-bold text-white mb-1">
+                          👨‍⚕️ Assign Doctors to Cases
+                        </h3>
+                        <p className="text-sm text-gray-400">
+                          {cases.filter(c => !c.interpretation && !c.doctor).length} case(s) waiting for assignment
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const unassignedIds = cases
+                              .filter(c => !c.interpretation && !c.doctor)
+                              .map(c => c.id)
+                            setSelectedCases(unassignedIds)
+                          }}
+                          className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                          style={{ backgroundColor: "#222" }}
+                        >
+                          Select All
+                        </button>
+                        <select
+                          onChange={async (e) => {
+                            if (!e.target.value) return
+                            const unassignedIds = cases
+                              .filter(c => !c.interpretation && !c.doctor)
+                              .map(c => c.id)
+                            await handleBulkAssign(unassignedIds, e.target.value)
+                            e.target.value = ""
+                          }}
+                          disabled={bulkAssigning || doctors.length === 0}
+                          className="text-sm rounded-lg px-4 py-2 text-white focus:outline-none"
+                          style={{
+                            backgroundColor: "#222",
+                            border: "1px solid #9C27B055",
+                          }}
+                        >
+                          <option value="">Assign all to...</option>
+                          {doctors.map((d) => (
+                            <option key={d.id} value={d.id}>
+                              Dr. {d.name}
+                            </option>
+                          ))}
+                        </select>
+                        {bulkAssigning && (
+                          <span className="text-sm" style={{ color: "#9C27B0" }}>
+                            Assigning...
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Cases List ── */}
+                {cases.filter(c => !c.interpretation && !c.doctor).length === 0 && !cases.some(c => c.interpretation || c.doctor) ? null : (
+                  <div className="space-y-3">
                 const statusColor = STATUS_COLORS[c.ecgUpload?.status] || "#666"
+                const isSelected = selectedCases.includes(c.id)
                 return (
                   <div
                     key={c.id}
                     className="rounded-xl p-5"
                     style={{
                       backgroundColor: "#161616",
-                      border: `1px solid ${statusColor}33`,
+                      border: `1px solid ${STATUS_COLORS}33`,
                     }}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="flex items-center gap-4">
+                        {/* Selection checkbox */}
+                        {!c.interpretation && (
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedCases(prev => [...prev, c.id])
+                              } else {
+                                setSelectedCases(prev => prev.filter(id => id !== c.id))
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
+                          />
+                        )}
                         <div
                           className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
                           style={{ backgroundColor: statusColor + "22" }}
@@ -584,19 +721,26 @@ function AdminPanelContent() {
                   </div>
                 )
               })
-            )}
-          </div>
+            }
+                  </div>
+                )}
+            </div>
         )}
 
         {/* ── USERS TAB ── */}
         {activeTab === "users" && (
-          <div className="space-y-4">
-            <h2 className="text-white font-bold text-lg">
-              All Users{" "}
-              <span className="text-sm font-normal text-gray-400">
-                ({users.length} total)
-              </span>
-            </h2>
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-white font-bold text-lg mb-2">
+                All Users{" "}
+                <span className="text-sm font-normal text-gray-400">
+                  ({users.length} total)
+                </span>
+              </h2>
+              <p className="text-gray-400 text-sm">
+                Manage user accounts and assign roles. Doctors can interpret ECG cases, patients submit reports, and admins manage the platform.
+              </p>
+            </div>
 
             {/* Role summary */}
             <div className="grid grid-cols-3 gap-3 mb-2">
@@ -657,11 +801,17 @@ function AdminPanelContent() {
                             month: "short",
                             year: "numeric",
                           })}
-                          {u.role === "PATIENT" &&
-                            ` · ${u._count?.payments || 0} payments`}
-                          {u.role === "DOCTOR" &&
-                            ` · ${u._count?.interpretations || 0} interpretations`}
                         </p>
+                        {u.role === "PATIENT" && (
+                          <p className="text-gray-500 text-xs mt-1">
+                            📊 {u._count?.payments || 0} ECG submission(s)
+                          </p>
+                        )}
+                        {u.role === "DOCTOR" && (
+                          <p className="text-gray-500 text-xs mt-1">
+                            ✅ {u._count?.interpretations || 0} case(s) interpreted
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -718,3 +868,11 @@ export default function AdminPanel() {
     </Suspense>
   )
 }
+
+function setUpdatingRole(userId: string) {
+  throw new Error("Function not implemented.")
+}
+function setToast(msg: string) {
+  throw new Error("Function not implemented.")
+}
+

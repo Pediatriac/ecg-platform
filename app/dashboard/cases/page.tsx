@@ -207,7 +207,31 @@ export default function CasesPage() {
                           {c.payment.status === "success" ? "Paid" : "Unpaid"}
                         </span>
                       )}
+                      {c.status === "PAID" && !c.case?.doctor && (
+                        <span
+                          className="text-xs px-3 py-1 rounded-full"
+                          style={{
+                            backgroundColor: "#9C27B022",
+                            color: "#9C27B0",
+                            border: "1px solid #9C27B033",
+                          }}
+                        >
+                          Waiting for doctor assignment
+                        </span>
+                      )}
 
+                      {c.status === "ASSIGNED" && c.case?.doctor && (
+                        <span
+                          className="text-xs px-3 py-1 rounded-full"
+                          style={{
+                            backgroundColor: "#9C27B022",
+                            color: "#9C27B0",
+                            border: "1px solid #9C27B033",
+                          }}
+                        >
+                          Assigned to Dr. {c.case.doctor.name}
+                        </span>
+                      )}
                       {/* Download report button — only when completed */}
                       {c.case?.interpretation && c.case.interpretation.reportUrl && (
                         <a

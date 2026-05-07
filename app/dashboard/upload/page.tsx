@@ -121,7 +121,7 @@ export default function UploadPage() {
           >
             <div className="rounded-full p-1" style={{ backgroundColor: "#111111" }}>
               <Image
-                src="/logo.png"
+                src="/image/xseve.png"
                 alt="Logo"
                 width={32}
                 height={32}

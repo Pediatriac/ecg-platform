@@ -50,6 +50,12 @@ export default function DoctorCaseDetailPage() {
   const [caseData, setCaseData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [message, setMessage] = useState("")
+  const [resending, setResending] = useState(false)
+  const [showNotifyModal, setShowNotifyModal] = useState(false)
+  const [notifySubject, setNotifySubject] = useState("")
+  const [notifyMessage, setNotifyMessage] = useState("")
+  const [sendingNotification, setSendingNotification] = useState(false)
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -90,6 +96,63 @@ export default function DoctorCaseDetailPage() {
       })
       .finally(() => setLoading(false))
   }, [pathname])
+
+  async function handleResendReport() {
+    if (!caseData?.id) return
+    setResending(true)
+    setError("")
+    setMessage("")
+
+    const res = await fetch("/api/doctor/resend-report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ caseId: caseData.id }),
+    })
+
+    const data = await res.json()
+    if (!res.ok) {
+      setError(data.error || "Failed to resend report")
+      setResending(false)
+      return
+    }
+
+    setMessage("Report notification resent to the patient.")
+    setResending(false)
+    setTimeout(() => setMessage(""), 4000)
+  }
+
+  async function handleSendNotification(e: React.FormEvent) {
+    e.preventDefault()
+    if (!caseData?.id || !notifySubject.trim() || !notifyMessage.trim()) return
+
+    setSendingNotification(true)
+    setError("")
+    setMessage("")
+
+    const res = await fetch("/api/doctor/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        caseId: caseData.id,
+        subject: notifySubject.trim(),
+        message: notifyMessage.trim(),
+      }),
+    })
+
+    const data = await res.json()
+    if (!res.ok) {
+      setError(data.error || "Failed to send notification")
+      setSendingNotification(false)
+      return
+    }
+
+    setMessage("Custom notification sent to the patient.")
+    setShowNotifyModal(false)
+    setNotifySubject("")
+    setNotifyMessage("")
+    setSendingNotification(false)
+    setTimeout(() => setMessage(""), 4000)
+  }
 
   const backUrl = "/doctor"
   const statusLabel = caseData?.ecgUpload?.status
@@ -180,6 +243,18 @@ export default function DoctorCaseDetailPage() {
             <p className="text-gray-400 mt-2 text-sm max-w-2xl">
               Review the details of this patient case, confirm payment and complete the interpretation.
             </p>
+            {message && (
+              <div className="mt-4 rounded-lg px-4 py-3 text-sm font-medium"
+                style={{ backgroundColor: "#0a2d1a", color: "#4CAF50", border: "1px solid #4CAF50" }}>
+                ✅ {message}
+              </div>
+            )}
+            {error && (
+              <div className="mt-4 rounded-lg px-4 py-3 text-sm"
+                style={{ backgroundColor: "#2d0a0a", color: "#f87171", border: "1px solid #7f1d1d" }}>
+                {error}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-3">
@@ -312,8 +387,87 @@ export default function DoctorCaseDetailPage() {
                 Download final report
               </a>
             )}
+            {caseData.interpretation && (
+              <div className="space-y-3">
+                <button
+                  onClick={handleResendReport}
+                  disabled={resending}
+                  className="block w-full rounded-3xl px-6 py-4 text-center font-semibold text-white"
+                  style={{
+                    background: resending ? "#555" : "linear-gradient(135deg, #00BCD4, #4CAF50)",
+                  }}>
+                  {resending ? "Resending report notification..." : "🔁 Resend Report to Patient"}
+                </button>
+                <button
+                  onClick={() => setShowNotifyModal(true)}
+                  className="block w-full rounded-3xl px-6 py-4 text-center font-semibold text-white"
+                  style={{ background: "linear-gradient(135deg, #9C27B0, #E91E8C)" }}>
+                  📧 Send Custom Notification
+                </button>
+              </div>
+            )}
           </aside>
         </div>
+
+        {/* Custom Notification Modal */}
+        {showNotifyModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+            <div className="w-full max-w-md rounded-3xl border p-6"
+              style={{ backgroundColor: "#161616", borderColor: "#2a2a2a" }}>
+              <h3 className="text-lg font-bold text-white mb-4">Send Custom Notification</h3>
+              <form onSubmit={handleSendNotification} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Subject
+                  </label>
+                  <input
+                    type="text"
+                    value={notifySubject}
+                    onChange={(e) => setNotifySubject(e.target.value)}
+                    className="w-full rounded-lg px-3 py-2 text-white"
+                    style={{ backgroundColor: "#111111", border: "1px solid #2a2a2a" }}
+                    placeholder="e.g., Case Update"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Message
+                  </label>
+                  <textarea
+                    value={notifyMessage}
+                    onChange={(e) => setNotifyMessage(e.target.value)}
+                    className="w-full rounded-lg px-3 py-2 text-white resize-none"
+                    style={{ backgroundColor: "#111111", border: "1px solid #2a2a2a" }}
+                    rows={4}
+                    placeholder="Enter your message to the patient..."
+                    required
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowNotifyModal(false)}
+                    className="flex-1 rounded-lg px-4 py-2 text-sm font-medium text-gray-300"
+                    style={{ backgroundColor: "#2a2a2a" }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={sendingNotification}
+                    className="flex-1 rounded-lg px-4 py-2 text-sm font-medium text-white"
+                    style={{
+                      background: sendingNotification ? "#555" : "linear-gradient(135deg, #9C27B0, #E91E8C)"
+                    }}
+                  >
+                    {sendingNotification ? "Sending..." : "Send Notification"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )

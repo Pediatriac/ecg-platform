@@ -28,6 +28,11 @@ export interface CaseWithInterpretation {
     createdAt: Date;
     updatedAt: Date;
   } | null;
+  doctor?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
 }
 
 export interface Patient {
