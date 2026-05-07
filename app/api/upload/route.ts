@@ -205,9 +205,12 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (error) {
-    console.error("Upload error:", error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error("Upload error:", errorMessage)
+    console.error("NEXTAUTH_URL:", process.env.NEXTAUTH_URL)
+    console.error("CLOUDINARY_CLOUD_NAME:", process.env.CLOUDINARY_CLOUD_NAME ? "set" : "NOT SET")
     return NextResponse.json(
-      { error: "Upload failed. Please try again." },
+      { error: "Upload failed. Please try again.", details: process.env.NODE_ENV === "development" ? errorMessage : undefined },
       { status: 500 }
     )
   }
