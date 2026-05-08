@@ -543,7 +543,7 @@ function AdminPanelContent() {
                 )}
 
                 {/* ── Cases List ── */}
-                {cases.filter(c => !c.interpretation && !c.doctor).length === 0 && !cases.some(c => c.interpretation || c.doctor) ? null : (
+                {cases.length > 0 ? (
                   <div className="space-y-3">
                     {cases.map((c) => {
                       const statusColor = STATUS_COLORS[c.ecgUpload?.status] || "#666"
@@ -554,7 +554,7 @@ function AdminPanelContent() {
                           className="rounded-xl p-5"
                           style={{
                             backgroundColor: "#161616",
-                            border: `1px solid ${STATUS_COLORS}33`,
+                            border: `1px solid ${statusColor}33`,
                           }}
                         >
                           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -724,7 +724,7 @@ function AdminPanelContent() {
               })
             }
                   </div>
-                )
+                ) : null}
             </div>
         )}
 
