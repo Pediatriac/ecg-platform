@@ -34,6 +34,8 @@ function AdminPanelContent() {
   const [loading, setLoading]           = useState(true)
   const [selectedCases, setSelectedCases] = useState<string[]>([])
   const [bulkAssigning, setBulkAssigning] = useState(false)
+  const [updatingRole, setUpdatingRole]   = useState<string | null>(null)
+  const [toast, setToast]                 = useState("")
 
   // Read tab from URL
   useEffect(() => {
@@ -725,7 +727,6 @@ function AdminPanelContent() {
             }
                   </div>
                 ) : null}
-            </div>
         )}
 
         {/* ── USERS TAB ── */}
@@ -868,12 +869,5 @@ export default function AdminPanel() {
       <AdminPanelContent />
     </Suspense>
   )
-}
-
-function setUpdatingRole(userId: string) {
-  throw new Error("Function not implemented.")
-}
-function setToast(msg: string) {
-  throw new Error("Function not implemented.")
 }
 
