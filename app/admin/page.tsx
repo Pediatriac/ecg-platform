@@ -545,18 +545,19 @@ function AdminPanelContent() {
                 {/* ── Cases List ── */}
                 {cases.filter(c => !c.interpretation && !c.doctor).length === 0 && !cases.some(c => c.interpretation || c.doctor) ? null : (
                   <div className="space-y-3">
-                const statusColor = STATUS_COLORS[c.ecgUpload?.status] || "#666"
-                const isSelected = selectedCases.includes(c.id)
-                return (
-                  <div
-                    key={c.id}
-                    className="rounded-xl p-5"
-                    style={{
-                      backgroundColor: "#161616",
-                      border: `1px solid ${STATUS_COLORS}33`,
-                    }}
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-4">
+                    {cases.map((c) => {
+                      const statusColor = STATUS_COLORS[c.ecgUpload?.status] || "#666"
+                      const isSelected = selectedCases.includes(c.id)
+                      return (
+                        <div
+                          key={c.id}
+                          className="rounded-xl p-5"
+                          style={{
+                            backgroundColor: "#161616",
+                            border: `1px solid ${STATUS_COLORS}33`,
+                          }}
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="flex items-center gap-4">
                         {/* Selection checkbox */}
                         {!c.interpretation && (
@@ -723,7 +724,7 @@ function AdminPanelContent() {
               })
             }
                   </div>
-                )}
+                )
             </div>
         )}
 
