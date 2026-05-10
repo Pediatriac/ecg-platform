@@ -545,12 +545,11 @@ function AdminPanelContent() {
                 )}
 
                 {/* ── Cases List ── */}
-                {cases.length > 0 ? (
-                  <div className="space-y-3">
-                    {cases.map((c) => {
-                      const statusColor = STATUS_COLORS[c.ecgUpload?.status] || "#666"
-                      const isSelected = selectedCases.includes(c.id)
-                      return (
+                <div className="space-y-3">
+                  {cases.map((c) => {
+                    const statusColor = STATUS_COLORS[c.ecgUpload?.status] || "#666"
+                    const isSelected = selectedCases.includes(c.id)
+                    return (
                         <div
                           key={c.id}
                           className="rounded-xl p-5"
@@ -723,12 +722,11 @@ function AdminPanelContent() {
                     )}
                   </div>
                 )
-              })
-            }
-                  </div>
-                ) : null}
-        )}
-
+                })}
+                </div>
+                </div>
+              </div>
+            )}
         {/* ── USERS TAB ── */}
         {activeTab === "users" && (
           <div className="space-y-6">
