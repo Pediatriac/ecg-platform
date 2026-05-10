@@ -199,7 +199,10 @@ function AdminPanelContent() {
                 "linear-gradient(135deg, #E91E8C, #9C27B0, #00BCD4, #4CAF50, #FFEB3B)",
             }}
           >
-            <div className="rounded-full p-1" style={{ backgroundColor: "#111111" }}>
+            <div
+              className="rounded-full p-1"
+              style={{ backgroundColor: "#111111" }}
+            >
               <Image
                 src="/logo.png"
                 alt="Logo"
@@ -220,8 +223,12 @@ function AdminPanelContent() {
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right hidden sm:block">
-            <p className="text-white text-sm font-medium">{session?.user?.name}</p>
-            <p className="text-xs" style={{ color: "#E91E8C" }}>Administrator</p>
+            <p className="text-white text-sm font-medium">
+              {session?.user?.name}
+            </p>
+            <p className="text-xs" style={{ color: "#E91E8C" }}>
+              Administrator
+            </p>
           </div>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
@@ -246,7 +253,8 @@ function AdminPanelContent() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-white">
-              Admin <span style={{ color: "#E91E8C" }}>Control Panel</span>
+              Admin{" "}
+              <span style={{ color: "#E91E8C" }}>Control Panel</span>
             </h1>
             <p className="text-gray-400 text-sm mt-0.5">
               Manage users, cases, and revenue
@@ -272,9 +280,10 @@ function AdminPanelContent() {
               }}
               className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2"
               style={{
-                backgroundColor: activeTab === tab.key ? tab.color + "22" : "#161616",
-                color:           activeTab === tab.key ? tab.color : "#666",
-                border:          `1px solid ${activeTab === tab.key ? tab.color : "#2a2a2a"}`,
+                backgroundColor:
+                  activeTab === tab.key ? tab.color + "22" : "#161616",
+                color:  activeTab === tab.key ? tab.color : "#666",
+                border: `1px solid ${activeTab === tab.key ? tab.color : "#2a2a2a"}`,
               }}
             >
               {tab.icon} {tab.label}
@@ -285,6 +294,8 @@ function AdminPanelContent() {
         {/* ── OVERVIEW TAB ── */}
         {activeTab === "overview" && (
           <div className="space-y-6">
+
+            {/* Stats grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
                 { label: "Total Users",     value: stats?.totalUsers,        color: "#E91E8C", icon: "👥" },
@@ -304,7 +315,10 @@ function AdminPanelContent() {
                 <div
                   key={s.label}
                   className="rounded-xl p-5 flex flex-col gap-2"
-                  style={{ backgroundColor: "#161616", border: `1px solid ${s.color}33` }}
+                  style={{
+                    backgroundColor: "#161616",
+                    border: `1px solid ${s.color}33`,
+                  }}
                 >
                   <span className="text-2xl">{s.icon}</span>
                   <p className="text-2xl font-extrabold" style={{ color: s.color }}>
@@ -315,7 +329,7 @@ function AdminPanelContent() {
               ))}
             </div>
 
-            {/* Revenue */}
+            {/* Revenue breakdown */}
             <div
               className="rounded-xl p-6"
               style={{ backgroundColor: "#161616", border: "1px solid #4CAF5033" }}
@@ -330,17 +344,27 @@ function AdminPanelContent() {
                     value: `₦${((stats?.totalRevenue || 0) / 100).toLocaleString()}`,
                     color: "#4CAF50",
                   },
-                  { label: "Annual Maintenance", value: "₦700,000", color: "#FFEB3B" },
+                  {
+                    label: "Annual Maintenance",
+                    value: "₦700,000",
+                    color: "#FFEB3B",
+                  },
                   {
                     label: "Net Revenue",
-                    value: `₦${Math.max(0, (stats?.totalRevenue || 0) / 100 - 700000).toLocaleString()}`,
+                    value: `₦${Math.max(
+                      0,
+                      (stats?.totalRevenue || 0) / 100 - 700000
+                    ).toLocaleString()}`,
                     color: "#00BCD4",
                   },
                 ].map((r) => (
                   <div
                     key={r.label}
                     className="rounded-lg p-4"
-                    style={{ backgroundColor: "#1a1a1a", border: `1px solid ${r.color}33` }}
+                    style={{
+                      backgroundColor: "#1a1a1a",
+                      border: `1px solid ${r.color}33`,
+                    }}
                   >
                     <p className="text-gray-400 text-xs mb-1">{r.label}</p>
                     <p className="text-2xl font-extrabold" style={{ color: r.color }}>
@@ -360,30 +384,42 @@ function AdminPanelContent() {
                 <span style={{ color: "#00BCD4" }}>💳</span> Recent Payments
               </h2>
               {recentPayments.length === 0 ? (
-                <p className="text-gray-400 text-sm text-center py-6">No payments yet</p>
+                <p className="text-gray-400 text-sm text-center py-6">
+                  No payments yet
+                </p>
               ) : (
                 <div className="space-y-3">
                   {recentPayments.map((p) => (
                     <div
                       key={p.id}
                       className="flex items-center justify-between gap-4 flex-wrap p-3 rounded-lg"
-                      style={{ backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a" }}
+                      style={{
+                        backgroundColor: "#1a1a1a",
+                        border: "1px solid #2a2a2a",
+                      }}
                     >
                       <div>
-                        <p className="text-white text-sm font-semibold">{p.user?.name}</p>
+                        <p className="text-white text-sm font-semibold">
+                          {p.user?.name}
+                        </p>
                         <p className="text-gray-400 text-xs">{p.user?.email}</p>
                         <p className="text-gray-500 text-xs mt-0.5">
                           Patient: {p.ecgUpload?.patient?.fullName}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-extrabold" style={{ color: "#4CAF50" }}>
+                        <p
+                          className="font-extrabold"
+                          style={{ color: "#4CAF50" }}
+                        >
                           ₦{(p.amount / 100).toLocaleString()}
                         </p>
                         <p className="text-gray-400 text-xs">
                           {p.paidAt
                             ? new Date(p.paidAt).toLocaleDateString("en-NG", {
-                                day: "numeric", month: "short", year: "numeric",
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
                               })
                             : "—"}
                         </p>
@@ -399,6 +435,8 @@ function AdminPanelContent() {
         {/* ── CASES TAB ── */}
         {activeTab === "cases" && (
           <div className="space-y-4">
+
+            {/* Cases header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <h2 className="text-white font-bold text-lg">
                 All Cases{" "}
@@ -426,11 +464,16 @@ function AdminPanelContent() {
                       }}
                       disabled={bulkAssigning}
                       className="text-xs rounded-lg px-3 py-1.5 text-white focus:outline-none"
-                      style={{ backgroundColor: "#222", border: "1px solid #9C27B055" }}
+                      style={{
+                        backgroundColor: "#222",
+                        border: "1px solid #9C27B055",
+                      }}
                     >
                       <option value="">Bulk assign to...</option>
                       {doctors.map((d) => (
-                        <option key={d.id} value={d.id}>Dr. {d.name}</option>
+                        <option key={d.id} value={d.id}>
+                          Dr. {d.name}
+                        </option>
                       ))}
                     </select>
                   </>
@@ -438,7 +481,9 @@ function AdminPanelContent() {
                 <button
                   onClick={() => router.push("/doctor")}
                   className="px-4 py-2 rounded-lg text-sm font-bold text-white"
-                  style={{ background: "linear-gradient(135deg, #9C27B0, #E91E8C)" }}
+                  style={{
+                    background: "linear-gradient(135deg, #9C27B0, #E91E8C)",
+                  }}
                 >
                   👨‍⚕️ Doctor Dashboard
                 </button>
@@ -449,7 +494,10 @@ function AdminPanelContent() {
             {unassignedCases.length > 0 && (
               <div
                 className="rounded-xl p-5 border-l-4"
-                style={{ backgroundColor: "#161616", borderColor: "#9C27B0" }}
+                style={{
+                  backgroundColor: "#161616",
+                  borderColor: "#9C27B0",
+                }}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
@@ -462,7 +510,9 @@ function AdminPanelContent() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setSelectedCases(unassignedCases.map((c) => c.id))}
+                      onClick={() =>
+                        setSelectedCases(unassignedCases.map((c) => c.id))
+                      }
                       className="px-4 py-2 rounded-lg text-sm font-medium text-white"
                       style={{ backgroundColor: "#222" }}
                     >
@@ -479,11 +529,16 @@ function AdminPanelContent() {
                       }}
                       disabled={bulkAssigning || doctors.length === 0}
                       className="text-sm rounded-lg px-4 py-2 text-white focus:outline-none"
-                      style={{ backgroundColor: "#222", border: "1px solid #9C27B055" }}
+                      style={{
+                        backgroundColor: "#222",
+                        border: "1px solid #9C27B055",
+                      }}
                     >
                       <option value="">Assign all to...</option>
                       {doctors.map((d) => (
-                        <option key={d.id} value={d.id}>Dr. {d.name}</option>
+                        <option key={d.id} value={d.id}>
+                          Dr. {d.name}
+                        </option>
                       ))}
                     </select>
                     {bulkAssigning && (
@@ -496,6 +551,7 @@ function AdminPanelContent() {
               </div>
             )}
 
+            {/* Cases list */}
             {cases.length === 0 ? (
               <div
                 className="rounded-xl p-12 text-center"
@@ -515,7 +571,9 @@ function AdminPanelContent() {
                       className="rounded-xl p-5"
                       style={{
                         backgroundColor: "#161616",
-                        border: `1px solid ${isSelected ? "#9C27B0" : statusColor + "33"}`,
+                        border: `1px solid ${
+                          isSelected ? "#9C27B0" : statusColor + "33"
+                        }`,
                       }}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -557,9 +615,14 @@ function AdminPanelContent() {
                             </p>
                             <p className="text-gray-500 text-xs mt-0.5">
                               Submitted:{" "}
-                              {new Date(c.createdAt).toLocaleDateString("en-NG", {
-                                day: "numeric", month: "short", year: "numeric",
-                              })}
+                              {new Date(c.createdAt).toLocaleDateString(
+                                "en-NG",
+                                {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                }
+                              )}
                             </p>
                           </div>
                         </div>
@@ -579,10 +642,15 @@ function AdminPanelContent() {
                             className="text-xs px-2 py-0.5 rounded-full"
                             style={{
                               backgroundColor:
-                                c.priority === "URGENT" ? "#E91E8C22" : "#00BCD422",
-                              color: c.priority === "URGENT" ? "#E91E8C" : "#00BCD4",
+                                c.priority === "URGENT"
+                                  ? "#E91E8C22"
+                                  : "#00BCD422",
+                              color:
+                                c.priority === "URGENT" ? "#E91E8C" : "#00BCD4",
                               border: `1px solid ${
-                                c.priority === "URGENT" ? "#E91E8C55" : "#00BCD455"
+                                c.priority === "URGENT"
+                                  ? "#E91E8C55"
+                                  : "#00BCD455"
                               }`,
                             }}
                           >
@@ -598,7 +666,10 @@ function AdminPanelContent() {
                                     : "#FFEB3B",
                               }}
                             >
-                              ₦{(c.ecgUpload.payment.amount / 100).toLocaleString()}{" "}
+                              ₦
+                              {(
+                                c.ecgUpload.payment.amount / 100
+                              ).toLocaleString()}{" "}
                               ·{" "}
                               {c.ecgUpload.payment.status === "success"
                                 ? "Paid"
@@ -611,7 +682,9 @@ function AdminPanelContent() {
                       {/* Doctor assignment row */}
                       <div className="mt-4 flex flex-wrap items-center gap-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-400 text-xs">Assigned to:</span>
+                          <span className="text-gray-400 text-xs">
+                            Assigned to:
+                          </span>
                           <span
                             className="text-sm font-medium"
                             style={{ color: c.doctor ? "#9C27B0" : "#666" }}
@@ -643,7 +716,10 @@ function AdminPanelContent() {
                               ))}
                             </select>
                             {assigning === c.id && (
-                              <span className="text-xs" style={{ color: "#9C27B0" }}>
+                              <span
+                                className="text-xs"
+                                style={{ color: "#9C27B0" }}
+                              >
                                 Assigning...
                               </span>
                             )}
@@ -664,6 +740,7 @@ function AdminPanelContent() {
                         )}
                       </div>
 
+                      {/* ECG file link */}
                       {c.ecgUpload?.fileUrl && (
                         
                           href={c.ecgUpload.fileUrl}
@@ -719,7 +796,10 @@ function AdminPanelContent() {
                   }}
                 >
                   <p className="text-xl mb-1">{r.icon}</p>
-                  <p className="text-xl font-extrabold" style={{ color: r.color }}>
+                  <p
+                    className="text-xl font-extrabold"
+                    style={{ color: r.color }}
+                  >
                     {users.filter((u) => u.role === r.role).length}
                   </p>
                   <p className="text-gray-400 text-xs capitalize">
@@ -746,17 +826,24 @@ function AdminPanelContent() {
                       <div className="flex items-center gap-3">
                         <div
                           className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
-                          style={{ backgroundColor: roleColor + "22", color: roleColor }}
+                          style={{
+                            backgroundColor: roleColor + "22",
+                            color: roleColor,
+                          }}
                         >
                           {u.name?.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-white font-semibold text-sm">{u.name}</p>
+                          <p className="text-white font-semibold text-sm">
+                            {u.name}
+                          </p>
                           <p className="text-gray-400 text-xs">{u.email}</p>
                           <p className="text-gray-500 text-xs mt-0.5">
                             Joined:{" "}
                             {new Date(u.createdAt).toLocaleDateString("en-NG", {
-                              day: "numeric", month: "short", year: "numeric",
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
                             })}
                             {u.role === "PATIENT" &&
                               ` · ${u._count?.payments || 0} payment(s)`}
@@ -781,7 +868,9 @@ function AdminPanelContent() {
                         {u.id !== session?.user?.id && (
                           <select
                             value={u.role}
-                            onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                            onChange={(e) =>
+                              handleRoleChange(u.id, e.target.value)
+                            }
                             disabled={updatingRole === u.id}
                             className="text-xs rounded-lg px-3 py-1.5 text-white focus:outline-none"
                             style={{
@@ -796,7 +885,10 @@ function AdminPanelContent() {
                         )}
 
                         {updatingRole === u.id && (
-                          <span className="text-xs" style={{ color: "#FFEB3B" }}>
+                          <span
+                            className="text-xs"
+                            style={{ color: "#FFEB3B" }}
+                          >
                             Updating...
                           </span>
                         )}
