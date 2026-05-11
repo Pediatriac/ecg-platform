@@ -740,9 +740,9 @@ function AdminPanelContent() {
                         )}
                       </div>
 
-                      {/* ECG file link */}
+                     {/* ECG file link */}
                       {c.ecgUpload?.fileUrl && (
-                        
+                        <a
                           href={c.ecgUpload.fileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
