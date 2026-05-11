@@ -233,7 +233,7 @@ export default function RegisterPage() {
                 style={{ backgroundColor: "#0a0a0a" }}
               >
                 <Image
-                  src="/logo.png"
+                  src="/image/xseve.png"
                   alt="Logo"
                   width={80}
                   height={80}
